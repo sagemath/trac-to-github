@@ -227,6 +227,7 @@ def trac2markdown(text, base_path, multilines = True, trac_ticket_url=None) :
             if trac_ticket_url:
                 # as long as the ticket themselfs have not been migrated they should reference to the original place
                 line = re.sub(r'\#([1-9]\d{0,4})', r'[#\1](%s/\1)' % trac_ticket_url, line)
+                line = re.sub(r' %s/([0-9]+)' % trac_ticket_url, r' [#\1](%s/\1)' % trac_ticket_url, line)
             if line.startswith('||'):
                 if not is_table:
                     sep = re.sub(r'\|\|=', r'||:', line) # take care of left align
