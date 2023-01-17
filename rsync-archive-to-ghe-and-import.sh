@@ -11,8 +11,8 @@ if [ -z "${TARGET_REPO-}" ]; then
     TARGET_REPO=sage-$(date +"%Y%m%d%H%M%S")
 fi
 sed -e "s/@HOST_IP@/$HOST_IP/;s/@TARGET_REPO@/$TARGET_REPO/" map-ghe.csv.in > map-ghe.csv
-RSYNC_OPTIONS=--stats
-#RSYNC_OPTIONS=--verbose
+#RSYNC_OPTIONS=--stats
+RSYNC_OPTIONS=--verbose
 if [ -z "${REMOTE_WORK_DIR-}" ]; then
     REMOTE_WORK_DIR=.
 fi

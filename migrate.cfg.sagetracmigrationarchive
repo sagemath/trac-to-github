@@ -37,6 +37,7 @@ migrate: yes
 # If defined, then this is added to the ticket query string to trac
 #filter_issues: max=50&order=id&page=1&desc=False
 #filter_issues: max=2796&order=id&page=2
+filter_issues: max=50000&order=id&desc=False
 
 # Add a label to all migrated issues
 # add_label: Websites
