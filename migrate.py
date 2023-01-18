@@ -368,8 +368,6 @@ RE_COMMIT_LIST2 = re.compile(r'\|\[(.+?)\]\((.*)\)\|`(.*?)`\|')
 RE_COMMIT_LIST3 = re.compile(r'\|(.*?)\|(.*?)\|')
 RE_NEW_COMMITS = re.compile(r'(?sm)(New commits:)\n((?:\|[^\n]*\|(?:\n|$))+)')
 RE_LAST_NEW_COMMITS = re.compile(r'(?sm)(Last \d+ new commits:)\n((?:\|[^\n]*\|(?:\n|$))+)')
-RE_BRANCH_FORCED_PUSH = re.compile(r'^(Branch pushed to git repo; I updated commit sha1[.] This was a forced push[.])')
-RE_BRANCH_PUSH = re.compile(r'^(Branch pushed to git repo; I updated commit sha1( and set ticket back to needs_review)?[.])')
 
 class CodeTag:
     """
@@ -1145,8 +1143,6 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
     text = RE_TRAC_REPORT.sub(r'[Trac report of id \1 inherited from the migration](%s/\1)' % trac_url_report, text)
     text = RE_NEW_COMMITS.sub(commits_list, text)
     text = RE_LAST_NEW_COMMITS.sub(commits_list, text)
-    # text = RE_BRANCH_FORCED_PUSH.sub(r'**\1**', text)
-    # text = RE_BRANCH_PUSH.sub(r'**\1**', text)
 
     text = unescape(text)
 
@@ -1229,10 +1225,9 @@ class WikiConversionHelper:
             label = '#{} comment:{}'.format(ticket, comment)
         else:
             label = match.group(3)
-        label = escape(label)
         if keep_trac_ticket_references:
-            return r'[%s](%s/%s#comment:%s)' % (label, trac_url_ticket, ticket, comment)
-        return r'[%s](%s/issues/%s#comment:%s)' % (label, target_url_issues_repo, ticket, comment)
+            return escape(r'[%s](%s/%s#comment:%s)' % (label, trac_url_ticket, ticket, comment))
+        return escape(r'[%s](%s/issues/%s#comment:%s)' % (label, target_url_issues_repo, ticket, comment))
 
     def comment_link(self, match):
         """
@@ -1240,13 +1235,11 @@ class WikiConversionHelper:
         in the case of a comment link.
         """
         comment = match.group(1)
-        s = '%3A'
         if len(match.groups()) < 2:
             label = 'comment:{}'.format(comment)
         else:
             label = match.group(2)
-        label = escape(label)
-        return r'%s%s%s(#comment%s%s)' % (link_displ.open, label, link_displ.close, s, comment)
+        return escape(r'%s%s%s(#comment:%s)' % (link_displ.open, label, link_displ.close, comment))
 
     def image_link(self, match):
         """
@@ -1467,7 +1460,7 @@ def convert_xmlrpc_datetime(dt):
 def convert_trac_datetime(dt):
     return datetime.strptime(str(dt), "%Y-%m-%d %H:%M:%S")
 
-def maptickettype(tickettype):
+def map_tickettype(tickettype):
     "Return GitHub label corresponding to Trac ``tickettype``"
     if not tickettype:
         return None
@@ -1484,7 +1477,7 @@ def maptickettype(tickettype):
     #return tickettype.lower()
     return None
 
-def mapresolution(resolution):
+def map_resolution(resolution):
     "Return GitHub label corresponding to Trac ``resolution``"
     if resolution == 'fixed':
         return None
@@ -1493,7 +1486,7 @@ def mapresolution(resolution):
     return resolution
 
 component_frequency = defaultdict(lambda: 0)
-def mapcomponent(component):
+def map_component(component):
     "Return GitHub label corresponding to Trac ``component``"
     if component == 'PLEASE CHANGE':
         return None
@@ -1510,7 +1503,7 @@ def mapcomponent(component):
 ignored_values = ['N/A', 'tba', 'T.b.a.', 'tbd', 'tdb', 'closed', 'somebody']
 
 default_priority = None
-def mappriority(priority):
+def map_priority(priority):
     "Return GitHub label corresponding to Trac ``priority``"
     if priority == default_priority:
         return None
@@ -1521,13 +1514,13 @@ def mappriority(priority):
     return f'p{numerical_priority} \u2013 {priority}'
 
 default_severity = 'normal'
-def mapseverity(severity):
+def map_severity(severity):
     "Return GitHub label corresponding to Trac ``severity``"
     if severity == default_severity:
         return None
     return severity
 
-def mapstatus(status):
+def map_status(status):
     "Return a pair: (status, label)"
     status = status.lower()
     if status in ['needs_review', 'needs_work', 'needs_info', 'positive_review']:
@@ -1541,7 +1534,7 @@ def mapstatus(status):
         return 'open', status.replace('_', ' ')
 
 keyword_frequency = defaultdict(lambda: 0)
-def mapkeywords(keywords):
+def map_keywords(keywords):
     "Return a pair: (list of keywords for ticket description, list of labels)"
     keep_as_keywords = []
     labels = []
@@ -1569,7 +1562,7 @@ def mapkeywords(keywords):
 
 milestone_map = {}
 unmapped_milestones = defaultdict(lambda: 0)
-def mapmilestone(title):
+def map_milestone(title):
     "Return a pair: (milestone title, label)"
     if not title:
         return None, None
@@ -1770,7 +1763,11 @@ def gh_comment_issue(dest, issue, comment, src_ticket_id, comment_id=None, minim
     note = preamble + note
 
     if comment_id:
-        anchor = f'<div id="comment:{comment_id}" align="right">Comment {comment_id}</div>\n\n'
+        if (note.startswith('Branch pushed to git repo;') or
+            note.startswith('New commits:')):
+            anchor = f'<div id="comment:{comment_id}"></div>\n\n'
+        else:
+            anchor = f'<div id="comment:{comment_id}" align="right">comment:{comment_id}</div>\n\n'
         note = anchor + note
 
     if dest is None : return
@@ -1785,7 +1782,7 @@ def gh_comment_issue(dest, issue, comment, src_ticket_id, comment_id=None, minim
         minimized_issue_comments.append(c.url)
     sleep(sleep_after_request)
 
-priority_labels = set(mappriority(priority)
+priority_labels = set(map_priority(priority)
                       for priority in ['trivial', 'minor', 'major', 'critical', 'blocker'])
 def normalize_labels(dest, labels):
     if 'duplicate/invalid/wontfix' in labels:
@@ -1912,27 +1909,29 @@ def convert_trac_username(origname, is_mention=False):
     try:
         gh_name = users_map[origname]
     except KeyError:
-        # Not a known Trac user
+        # not a known Trac user
         assert not origname.startswith('@')
         if re.fullmatch('[-A-Za-z._0-9]+', origname):
             # heuristic pattern for valid Trac account name (not an email address or full name or junk)
-            if not unmapped_users[origname]:
-                if is_mention:
-                    logging.info(f'Unmapped @ mention of {origname}')
-                else:
-                    logging.info(f'Unmapped Trac user {origname}')
-            unmapped_users[origname] += 1
+            pass
         else:
             return None
+        gh_name = False
     else:
         if gh_name:
             return gh_name
-    # Create mannequin user
+    # create mannequin user
     username = origname.replace('.', '-').replace('_', '-').strip('-')
     username = f'{unknown_users_prefix}{username}'
     if is_mention and not username in gh_users:
         return None
-    unmapped_users['@' + username] += 1
+    key = (origname, gh_name is not False, is_mention, '@' + username)
+    if not unmapped_users[key]:
+        if is_mention:
+            logging.info(f'Unmapped @ mention of {origname}')
+        else:
+            logging.info(f'Unmapped Trac user {origname}')
+    unmapped_users[key] += 1
     return username
 
 def gh_username(dest, origname):
@@ -2023,7 +2022,7 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
             milestone = get_milestone(source, milestone_name)
             log.debug(f'Milestone: {milestone}')
             title = milestone.pop('name')
-            title, label = mapmilestone(title)
+            title, label = map_milestone(title)
             if title:
                 log.info("Creating milestone " + title)
                 completed = milestone.pop('completed')
@@ -2130,7 +2129,7 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
             if ccstr != '' :
                 description_post += '\n\nCC: ' + ccstr
 
-            keywords, labels = mapkeywords(src_ticket_data.pop('keywords', ''))
+            keywords, labels = map_keywords(src_ticket_data.pop('keywords', ''))
             if keywords:
                 description_post += '\n\nKeywords: ' + attr_value(', '.join(keywords))
 
@@ -2193,14 +2192,14 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
 
             component = src_ticket_data.pop('component', None)
             if component is not None and component.strip() != '' :
-                label = mapcomponent(component)
+                label = map_component(component)
                 if label:
                     labels.append(label)
                     gh_ensure_label(dest, label, label_category='component')
 
             priority = src_ticket_data.pop('priority', default_priority)
             if priority != default_priority:
-                label = mappriority(priority)
+                label = map_priority(priority)
                 labels.append(label)
                 gh_ensure_label(dest, label, label_category='priority')
 
@@ -2209,22 +2208,22 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
                 labels.append(severity)
                 gh_ensure_label(dest, severity, label_category='severity')
 
-            tickettype = maptickettype(src_ticket_data.pop('type', None))
+            tickettype = map_tickettype(src_ticket_data.pop('type', None))
             if tickettype is not None :
                 labels.append(tickettype)
                 gh_ensure_label(dest, tickettype, label_category='type')
 
-            resolution = mapresolution(src_ticket_data.pop('resolution', None))
+            resolution = map_resolution(src_ticket_data.pop('resolution', None))
             if resolution is not None:
                 labels.append(resolution)
                 gh_ensure_label(dest, resolution, label_category='resolution')
 
-            keywords, keyword_labels = mapkeywords(src_ticket_data.get('keywords', ''))
+            keywords, keyword_labels = map_keywords(src_ticket_data.get('keywords', ''))
             for label in keyword_labels:
                 labels.append(label)
                 gh_ensure_label(dest, label, label_category='keyword')
 
-            milestone, label = mapmilestone(src_ticket_data.pop('milestone', None))
+            milestone, label = map_milestone(src_ticket_data.pop('milestone', None))
             if milestone and milestone in milestone_map:
                 milestone = milestone_map[milestone]
             elif milestone:
@@ -2238,7 +2237,7 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
                 gh_ensure_label(dest, label, label_category='milestone')
 
             status = src_ticket_data.pop('status', status)
-            issue_state, label = mapstatus(status)
+            issue_state, label = map_status(status)
             if label:
                 labels.append(label)
                 gh_ensure_label(dest, label, label_category='resolution')
@@ -2290,7 +2289,7 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
             # Find closed_at
             for time, author, change_type, oldvalue, newvalue, permanent in reversed(changelog):
                 if change_type == 'status':
-                    state, label = mapstatus(newvalue)
+                    state, label = map_status(newvalue)
                     if state == 'closed':
                         issue_data['closed_at'] = convert_xmlrpc_datetime(time)
                         break
@@ -2334,7 +2333,7 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
             for label in labels:
                 update_labels([], label, None)
 
-        issue_state, label = mapstatus(status)
+        issue_state, label = map_status(status)
         if label and label not in labels:
             update_labels([], label, None)
         last_sha = None
@@ -2342,8 +2341,8 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
         def change_status(newvalue):
             oldvalue = src_ticket_data.get('status')
             src_ticket_data['status'] = newvalue
-            oldstate, oldlabel = mapstatus(oldvalue)
-            newstate, newlabel = mapstatus(newvalue)
+            oldstate, oldlabel = map_status(oldvalue)
+            newstate, newlabel = map_status(newvalue)
             new_labels = update_labels(labels, newlabel, oldlabel)
             if issue_state != newstate :
                 if newstate == 'closed' and last_sha:
@@ -2403,12 +2402,12 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
             elif change_type == "status" :
                 issue_state, labels = change_status(newvalue)
             elif change_type == "resolution" :
-                oldresolution = mapresolution(oldvalue)
-                newresolution = mapresolution(newvalue)
+                oldresolution = map_resolution(oldvalue)
+                newresolution = map_resolution(newvalue)
                 labels = update_labels(labels, newresolution, oldresolution, 'resolution')
             elif change_type == "component" :
-                oldlabel = mapcomponent(oldvalue)
-                newlabel = mapcomponent(newvalue)
+                oldlabel = map_component(oldvalue)
+                newlabel = map_component(newvalue)
                 labels = update_labels(labels, newlabel, oldlabel, 'component')
             elif change_type == "owner" :
                 oldvalue = gh_username_list(dest, oldvalue)
@@ -2435,8 +2434,8 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
                 comment_data['note'] = desc
                 gh_comment_issue(dest, issue, comment_data, src_ticket_id)
             elif change_type == "milestone" :
-                oldmilestone, oldlabel = mapmilestone(oldvalue)
-                newmilestone, newlabel = mapmilestone(newvalue)
+                oldmilestone, oldlabel = map_milestone(oldvalue)
+                newmilestone, newlabel = map_milestone(newvalue)
                 if oldmilestone and oldmilestone in milestone_map:
                     oldmilestone = milestone_map[oldmilestone]
                 else:
@@ -2458,8 +2457,8 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
             elif change_type == "cc" :
                 pass  # we handle only the final list of CCs (above)
             elif change_type == "type" :
-                oldtype = maptickettype(oldvalue)
-                newtype = maptickettype(newvalue)
+                oldtype = map_tickettype(oldvalue)
+                newtype = map_tickettype(newvalue)
                 labels = update_labels(labels, newtype, oldtype, 'type')
             elif change_type == "description" :
                 if github:
@@ -2484,17 +2483,17 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
                 if status is not None:
                     issue_state, labels = change_status(status)
             elif change_type == "priority" :
-                oldlabel = mappriority(oldvalue)
-                newlabel = mappriority(newvalue)
+                oldlabel = map_priority(oldvalue)
+                newlabel = map_priority(newvalue)
                 labels = update_labels(labels, newlabel, oldlabel, 'priority')
             elif change_type == "severity" :
-                oldlabel = mapseverity(oldvalue)
-                newlabel = mapseverity(newvalue)
+                oldlabel = map_severity(oldvalue)
+                newlabel = map_severity(newvalue)
                 labels = update_labels(labels, newlabel, oldlabel, 'severity')
             elif change_type == "keywords" :
                 oldlabels = copy(labels)
-                oldkeywords, oldkeywordlabels = mapkeywords(oldvalue)
-                newkeywords, newkeywordlabels = mapkeywords(newvalue)
+                oldkeywords, oldkeywordlabels = map_keywords(oldvalue)
+                newkeywords, newkeywordlabels = map_keywords(newvalue)
                 for label in oldkeywordlabels:
                     with contextlib.suppress(ValueError):
                         labels.remove(label)
@@ -2601,10 +2600,14 @@ def convert_wiki(source, dest):
 def output_unmapped_users(data):
     table = Table(title="Unmapped users")
     table.add_column("Username", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Known on Trac", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Mention", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Mannequin", justify="right", style="cyan", no_wrap=True)
     table.add_column("Frequency", style="magenta")
 
     for key, frequency in data:
-        table.add_row(key, str(frequency))
+        origname, known_on_trac, is_mention, mannequin = key
+        table.add_row(origname, str(known_on_trac), str(is_mention), mannequin, str(frequency))
 
     console = Console()
     console.print(table)
@@ -2613,7 +2616,8 @@ def output_unmapped_users(data):
     if not os.path.exists('unmapped_users.txt'):
         with open('unmapped_users.txt', 'a') as f:
             for key, frequency in data:
-                f.write(' '.join([key, str(frequency)]) +'\n')
+                origname, known_on_trac, is_mention, mannequin = key
+                f.write(' '.join([origname, known_on_trac, str(is_mention), mannequin, str(frequency)]) +'\n')
 
 def output_unmapped_milestones(data):
     table = Table(title="Unmapped milestones")
@@ -2725,7 +2729,7 @@ if __name__ == "__main__":
             with open("minimized_issue_comments.json", "w") as f:
                 json.dump(minimized_issue_comments, f, indent=4)
 
-        output_unmapped_users(sorted(unmapped_users.items(), key=lambda x: -x[1]))
+        output_unmapped_users(sorted(unmapped_users.items(), key=lambda x: x[0]))
         output_unmapped_milestones(sorted(unmapped_milestones.items(), key=lambda x: -x[1]))
         output_keyword_frequency(sorted(keyword_frequency.items(), key=lambda x: -x[1]))
         output_component_frequency(sorted(component_frequency.items(), key=lambda x: -x[1]))

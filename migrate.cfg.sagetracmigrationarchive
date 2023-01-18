@@ -208,12 +208,14 @@ usernames = {
  'github': 'sagetrac-github-bot',
  # Users not in contributors list
  'Winfried': 'w-bruns',
+ 'asmeurer': 'asmeurer',
  # Typos and ad-hoc mentions
  'wstein': 'williamstein',
  'fhivert': 'hivert',
  'krcisman': 'kcrisman',
  'krisman': 'kcrisman',
  'ntheiry': 'nthiery',
+ 'Jhpalmieri': 'jhpalmieri',
  'vivianepons': 'VivianePons',
  'mmcarco': 'miguelmarco',
  'Cremona': 'JohnCremona',
