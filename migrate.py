@@ -1495,12 +1495,12 @@ def map_component(component):
     try:
         label = components_to_labels[component]
     except KeyError:
-        # Prefix it with "component: " so that they show up as one group in the GitHub dropdown list
-        label = f'component: {component}'
+        # Prefix it with "c: " so that they show up as one group in the GitHub dropdown list
+        label = f'c: {component}'
     component_frequency[label] += 1
     return label
 
-ignored_values = ['N/A', 'tba', 'T.b.a.', 'tbd', 'tdb', 'closed', 'somebody']
+ignored_values = ['N/A', 'tba', 'T.b.a.', 'tbd', 'tdb', 'closed', 'Somebody', 'somebody', 'someone', 'failure']
 
 default_priority = None
 def map_priority(priority):
@@ -1511,7 +1511,7 @@ def map_priority(priority):
         numerical_priority = 5 - ['trivial', 'minor', 'major', 'critical', 'blocker'].index(priority)
     except ValueError:
         return priority
-    return f'p{numerical_priority} \u2013 {priority}'
+    return f'p: {numerical_priority} \u2013 {priority}'
 
 default_severity = 'normal'
 def map_severity(severity):
@@ -1619,15 +1619,15 @@ def gh_create_issue(dest, issue_data) :
         if user_url:
             issue_data['user'] = user_url
 
-    assignee = issue_data.pop('assignee', GithubObject.NotSet)
-    if assignee is GithubObject.NotSet:
-        assignees = []
-    else:
-        assignees = [assignee]
+    ## assignee = issue_data.pop('assignee', GithubObject.NotSet)
+    ## if assignee is GithubObject.NotSet:
+    ##     assignees = []
+    ## else:
+    ##     assignees = [assignee]
 
     gh_issue = dest.create_issue(issue_data.pop('title'),
                                  description,
-                                 assignee=assignee, assignees=assignees,
+                                 #assignee=assignee, assignees=assignees,
                                  milestone=issue_data.pop('milestone', GithubObject.NotSet),
                                  labels=labels,
                                  **issue_data)
@@ -1668,6 +1668,8 @@ def gh_create_attachment(dest, issue, filename, src_ticket_id, attachment=None, 
             if filename.endswith('.log'):
                 # Python thinks it's text/plain.
                 mimetype = 'text/x-log'
+            elif filename.endswith('.bz2'):
+                mimetype = "application/octet-stream"
             elif filename.endswith('.gz'):
                 # Python thinks that .tar.gz is application/x-tar
                 mimetype = 'application/gzip'
@@ -1813,6 +1815,18 @@ def gh_update_issue_property(dest, issue, key, val, oldval=None, **kwds):
                 if label not in oldlabels:
                     # https://docs.github.com/en/developers/webhooks-and-events/events/issue-event-types#labeled
                     issue.create_event('labeled', label=label, **kwds)
+    elif key == 'assignees':
+        if not github:
+            kwds = copy(kwds)
+            kwds['subject'] = kwds.pop('actor')
+            for assignee in oldval:
+                if assignee not in val:
+                    # https://docs.github.com/en/developers/webhooks-and-events/events/issue-event-types#unassigneeed
+                    issue.create_event('unassigned', actor=assignee, **kwds)
+            for assignee in val:
+                if assignee not in oldval:
+                    # https://docs.github.com/en/developers/webhooks-and-events/events/issue-event-types#assigned
+                    issue.create_event('assigned', actor=assignee, **kwds)
     elif key == 'assignee' :
         if issue.assignee == val:
             return
@@ -1964,14 +1978,27 @@ def gh_user_url(dest, origname):
             return None
     return _gh_user(dest, username, origname).url
 
+def gh_user_url_list(dest, orignames, ignore=['somebody', 'tbd', 'tdb', 'tba']):
+    if not orignames:
+        return []
+    urls = []
+    for origname in orignames.split(','):
+        origname = origname.strip()
+        if origname and origname not in ignore:
+            url = gh_user_url(dest, origname)
+            if url:
+               urls.append(url)
+    return urls
+
 def gh_username_list(dest, orignames, ignore=['somebody', 'tbd', 'tdb', 'tba']):
     "Split and transform comma- separated lists of names"
     if not orignames:
         return ''
     names = []
     for origname in orignames.split(','):
-        name = gh_username(dest, origname.strip())
-        if name and name not in ignore:
+        origname = origname.strip()
+        if origname and origname not in ignore:
+            name = gh_username(dest, origname)
             names.append(name)
     return ', '.join(names)
 
@@ -2168,7 +2195,7 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
         for change in changelog :
             time, author, change_type, oldvalue, newvalue, permanent = change
             if change_type not in first_old_values:
-                if (change_type not in ['cc', 'reporter', 'comment', 'attachment']
+                if (change_type not in ['cc', 'comment', 'attachment']
                     and not change_type.startswith('_comment')):
                     field = change_type
                     if isinstance(oldvalue, str):
@@ -2278,7 +2305,6 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
         issue_data['labels'] = labels
         if milestone:
             issue_data['milestone'] = milestone
-        #'assignee' : assignee,
 
         if not github:
             issue_data['user'] = gh_username(dest, tmp_src_ticket_data.pop('reporter'))
@@ -2286,6 +2312,8 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
             issue_data['updated_at'] = convert_xmlrpc_datetime(time_changed)
             issue_data['number'] = int(src_ticket_id)
             issue_data['reactions'] = []
+            assignees = gh_user_url_list(dest, tmp_src_ticket_data.pop('owner'))
+            issue_data['assignees'] = assignees
             # Find closed_at
             for time, author, change_type, oldvalue, newvalue, permanent in reversed(changelog):
                 if change_type == 'status':
@@ -2321,6 +2349,7 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
             title, status = title_status(src_ticket_data.get('summary'), src_ticket_data.get('status'))
             tmp_src_ticket_data = copy(src_ticket_data)
             milestone, labels = milestone_labels(tmp_src_ticket_data, status)
+            assignees = gh_user_url_list(dest, tmp_src_ticket_data.pop('owner'))
 
             # Create issue events for initial labels & milestone
             user_url = gh_user_url(dest, tmp_src_ticket_data.get('reporter'))
@@ -2332,6 +2361,7 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
                 gh_update_issue_property(dest, issue, 'milestone', milestone, None, **event_data)
             for label in labels:
                 update_labels([], label, None)
+            gh_update_issue_property(dest, issue, 'assignees', assignees, oldval=[], **event_data)
 
         issue_state, label = map_status(status)
         if label and label not in labels:
@@ -2410,22 +2440,19 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
                 newlabel = map_component(newvalue)
                 labels = update_labels(labels, newlabel, oldlabel, 'component')
             elif change_type == "owner" :
-                oldvalue = gh_username_list(dest, oldvalue)
-                newvalue = gh_username_list(dest, newvalue)
-                if oldvalue and newvalue:
-                    comment_data['note'] = 'Changed assignee from ' + attr_value(oldvalue) + ' to ' + attr_value(newvalue)
-                elif newvalue:
-                    comment_data['note'] = 'Assignee: ' + attr_value(newvalue)
-                else:
-                    comment_data['note'] = 'Removed assignee ' + attr_value(oldvalue)
-                if newvalue != oldvalue:
-                    gh_comment_issue(dest, issue, comment_data, src_ticket_id)
-
-                # if newvalue != oldvalue :
-                #     assignee = gh_username(dest, newvalue)
-                #     if not assignee.startswith('@') :
-                #         assignee = GithubObject.NotSet
-                #     gh_update_issue_property(dest, issue, 'assignee', assignee)
+                oldvalue = gh_user_url_list(dest, oldvalue)
+                newvalue = gh_user_url_list(dest, newvalue)
+                gh_update_issue_property(dest, issue, 'assignees', newvalue, oldval=oldvalue, **event_data)
+                # oldvalue = gh_username_list(dest, oldvalue)
+                # newvalue = gh_username_list(dest, newvalue)
+                # if oldvalue and newvalue:
+                #     comment_data['note'] = 'Changed assignee from ' + attr_value(oldvalue) + ' to ' + attr_value(newvalue)
+                # elif newvalue:
+                #     comment_data['note'] = 'Assignee: ' + attr_value(newvalue)
+                # else:
+                #     comment_data['note'] = 'Removed assignee ' + attr_value(oldvalue)
+                # if newvalue != oldvalue:
+                #     gh_comment_issue(dest, issue, comment_data, src_ticket_id)
             elif change_type == "version" :
                 if oldvalue != '':
                     desc = "Changed version from %s to %s." % (attr_value(oldvalue), attr_value(newvalue))
@@ -2617,7 +2644,7 @@ def output_unmapped_users(data):
         with open('unmapped_users.txt', 'a') as f:
             for key, frequency in data:
                 origname, known_on_trac, is_mention, mannequin = key
-                f.write(' '.join([origname, known_on_trac, str(is_mention), mannequin, str(frequency)]) +'\n')
+                f.write(' '.join([origname, str(known_on_trac), str(is_mention), mannequin, str(frequency)]) +'\n')
 
 def output_unmapped_milestones(data):
     table = Table(title="Unmapped milestones")
@@ -2729,7 +2756,7 @@ if __name__ == "__main__":
             with open("minimized_issue_comments.json", "w") as f:
                 json.dump(minimized_issue_comments, f, indent=4)
 
-        output_unmapped_users(sorted(unmapped_users.items(), key=lambda x: x[0]))
+        output_unmapped_users(sorted(unmapped_users.items(), key=lambda x: (x[0][0].lower(), *x[0][1:])))
         output_unmapped_milestones(sorted(unmapped_milestones.items(), key=lambda x: -x[1]))
         output_keyword_frequency(sorted(keyword_frequency.items(), key=lambda x: -x[1]))
         output_component_frequency(sorted(component_frequency.items(), key=lambda x: -x[1]))

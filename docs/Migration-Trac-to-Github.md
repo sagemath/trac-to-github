@@ -60,7 +60,7 @@ See also: https://trac.sagemath.org/ticket/30363
   - **Trac ticket box attributes** are mapped as follows (see https://github.com/sagemath/trac-to-github/issues/8):
     - **Type** ("defect", "enhancement", "task") are mapped to "Labels" "bug", "enhancement".
     - **Component** ("basic arithmetic", "linear algebra", "geometry", ...) are mapped to "Labels" 
-      with prefix `component: `
+      with prefix `c: `
     - **Priority** ("trivial"/"minor"/"major"/"critical"/"blocker") are mapped to "Labels" of the same name;
       no Label for the default priority "major".
     - **Keywords** can be mapped to "Labels"
