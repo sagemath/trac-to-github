@@ -82,11 +82,11 @@ components_to_labels = {
  'optional packages': 'c: packages: optional',
  'packages': 'c: packages: standard',
  'plotting': 'c: graphics',
- 'sage-check': 'c: spkg-check',
  # Old components, merge into something larger
  'debian-package': 'c: distribution',
  'pbuild': 'c: build',
  'spkg-check': 'c: packages: standard',
+ 'sage-check': 'c: packages: standard',
  'packages: huge': 'c: packages: optional',
  'notebook': 'c: user interface',
  'sage-mode': 'c: user interface',
