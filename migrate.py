@@ -1556,7 +1556,12 @@ def map_keywords(keywords):
                 words = keywords.split()
                 if len(words) > 1:
                     for word in words:
-                        keyword_frequency[word.lower()] += 1
+                        word = word.lower()
+                        if isinstance(keywords_to_labels, dict) and word in keywords_to_labels:
+                            # Map to label but don't remove from keywords because it may be part of a phrase.
+                            labels.append(keywords_to_labels[word])
+                        else:
+                            keyword_frequency[word] += 1
 
     return keep_as_keywords, labels
 
