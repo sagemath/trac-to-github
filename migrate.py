@@ -1546,8 +1546,8 @@ def map_keywords(keywords):
             continue
         if keywords_to_labels is True:
             labels.append(keyword)
-        elif isinstance(keywords_to_labels, dict) and keyword in keywords_to_labels:
-            labels.append(keywords_to_labels[keyword])
+        elif isinstance(keywords_to_labels, dict) and keyword.lower() in keywords_to_labels:
+            labels.append(keywords_to_labels[keyword.lower()])
         else:
             keep_as_keywords.append(keyword)
             keyword_frequency[keyword.lower()] += 1
@@ -2675,7 +2675,7 @@ def output_unmapped_milestones(data):
 
 min_keyword_frequency_displayed = 20
 def output_keyword_frequency(data):
-    table = Table(title="Keyword frequency")
+    table = Table(title="Unmapped keyword frequency")
     table.add_column("Keyword", justify="right", style="cyan", no_wrap=True)
     table.add_column("Frequency", style="magenta")
 
