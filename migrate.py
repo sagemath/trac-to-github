@@ -655,19 +655,19 @@ def commits_list(match):
             commit_id = m.group(1)
             commit_url = m.group(2)
             commit_msg = m.group(3).replace('\`', '`')
-            t += r'<tr><td><a href="{}">{}</a></td><td><code>{}</code></td></tr>'.format(commit_url, commit_id, commit_msg)
+            t += r'<tr><td><a href="{}"><code>{}</code></a></td><td><code>{}</code></td></tr>'.format(commit_url, commit_id, commit_msg)
         else:
             m = RE_COMMIT_LIST2.match(c)
             if m:
                 commit_id = m.group(1)
                 commit_url = m.group(2)
                 commit_msg = m.group(3)
-                t += r'<tr><td><a href="{}">{}</a></td><td><code>{}</code></td></tr>'.format(commit_url, commit_id, commit_msg)
+                t += r'<tr><td><a href="{}"><code>{}</code></a></td><td><code>{}</code></td></tr>'.format(commit_url, commit_id, commit_msg)
             else: # unusual format
                 m = RE_COMMIT_LIST3.match(c)
                 commit_id = m.group(1)
                 commit_msg = m.group(2)
-                t += r'<tr><td>{}</td><td><code>{}</code></td></tr>'.format(commit_id, commit_msg)
+                t += r'<tr><td><code>{}</code></td><td><code>{}</code></td></tr>'.format(commit_id, commit_msg)
     t += '</table>\n'
     return t
 
