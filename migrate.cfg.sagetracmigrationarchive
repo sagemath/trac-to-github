@@ -83,6 +83,13 @@ components_to_labels = {
  'packages': 'c: packages: standard',
  'plotting': 'c: graphics',
  'sage-check': 'c: spkg-check',
+ # Old components, merge into something larger
+ 'debian-package': 'c: distribution',
+ 'pbuild': 'c: build',
+ 'spkg-check': 'c: packages: standard',
+ 'packages: huge': 'c: packages: optional',
+ 'notebook': 'c: user interface',
+ 'sage-mode': 'c: user interface',
  # Tiny components, merge into something larger
  'linbox': 'c: packages: standard',
  'givaro': 'c: packages: standard',
@@ -90,6 +97,7 @@ components_to_labels = {
  'doctest': 'doctest coverage',
  'doctests': 'doctest coverage',
  'doctest coverage': 'doctest coverage',
+ 'memleak': 'memleak',
  'performance': 'performance',
  'refactoring': 'refactoring',
  # Suppress
@@ -109,7 +117,6 @@ label_colors = {
  'c: distribution': '000080',
  'c: docker': '000080',
  'c: doctest framework': '000080',
- 'c: memleak': '000080',
  'c: notebook': '000080',
  'c: packages': '000080',
  'c: packages: optional': '000080',
@@ -134,15 +141,16 @@ label_colors = {
  'needs review': '7fff00',
  'positive review': 'dfffc0',
  'help wanted': '008672',
- 'p1 \u2013 blocker': 'ff0000',
- 'p2 \u2013 critical': 'ff7700',
- 'p3 \u2013 major': 'ffbb00',
- 'p4 \u2013 minor': 'ffe799',
- 'p5 \u2013 trivial': 'fff9e5',
+ 'p: 1 \u2013 blocker': 'ff0000',
+ 'p: 2 \u2013 critical': 'ff7700',
+ 'p: 3 \u2013 major': 'ffbb00',
+ 'p: 4 \u2013 minor': 'ffe799',
+ 'p: 5 \u2013 trivial': 'fff9e5',
  'wishlist item': 'e81ff9',
  'good first issue': '7057ff',
  'bug': 'd73a4a',
  'enhancement': '696969',
+ 'memleak': '696969',
  'performance': '696969',
  'refactoring': '696969',
  'doctest coverage': '696969',
@@ -209,6 +217,7 @@ usernames = {
  # Users not in contributors list
  'Winfried': 'w-bruns',
  'asmeurer': 'asmeurer',
+ 'benjaminjones': 'benjaminfjones',
  # Typos and ad-hoc mentions
  'wstein': 'williamstein',
  'fhivert': 'hivert',
@@ -269,6 +278,7 @@ usernames = {
  'ashilling': 'anneschilling',
  'Anne': 'anneschilling',
  'fchapoton': 'fchapoton',
+ 'chapton': 'fchapoton',
  'bhackl': 'behackl',
  'bsalisbury': 'bsalisbury1',
  'bsalisbury01': 'bsalisbury1',
@@ -314,8 +324,13 @@ usernames = {
  'vbarun': 'vbraun',
  'vbaun': 'vbraun',
  'vdelacroix': 'videlec',
+ 'delecroix': 'videlec',
  'xcaruso': 'xcaruso',
  'Zabrocki': 'zabrocki',
- 'Zimmermann': 'zimmermann6'}
+ 'Zimmermann': 'zimmermann6',
+ 'ebriand': 'EmmanuelJeanBriand',
+ 'justin': 'RalphieBoy',
+ 'anna': 'annahaensch',
+ }
 
 unknown_users_prefix: sagetrac-

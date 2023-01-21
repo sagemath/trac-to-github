@@ -1789,7 +1789,7 @@ priority_labels = set(map_priority(priority)
 def normalize_labels(dest, labels):
     if 'duplicate/invalid/wontfix' in labels:
         labels.remove('duplicate/invalid/wontfix')
-        if not any(x in labels for x in ['duplicate', 'invalid', 'wontfix']):
+        if not any(x in labels for x in ['duplicate', 'invalid', 'wontfix', 'worksforme']):
             labels.append('invalid')
             gh_ensure_label(dest, 'invalid', label_category='resolution')
     if any(x in labels for x in ['duplicate', 'invalid', 'wontfix', 'worksforme']):
@@ -2225,7 +2225,9 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
             if add_label:
                 labels.append(add_label)
 
-            component = src_ticket_data.pop('component', None)
+            component = src_ticket_data.get('component', None)
+            # We do not pop the component; this is to ensure that one can search for
+            # Trac components even after an outdated component label is deleted in GitHub.
             if component is not None and component.strip() != '' :
                 label = map_component(component)
                 if label:
