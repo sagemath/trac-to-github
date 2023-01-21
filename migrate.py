@@ -1449,8 +1449,8 @@ def github_ref_url(ref):
 def github_ref_markdown(ref):
     url = github_ref_url(ref)
     if re.fullmatch(r'[0-9a-f]{40}', ref):
-        # shorten displayed commit sha
-        ref = ref[:7]
+        # shorten displayed commit sha and use monospace
+        ref = '`' + ref[:7] + '`'
     return f'[{ref}]({url})'
 
 def convert_xmlrpc_datetime(dt):
