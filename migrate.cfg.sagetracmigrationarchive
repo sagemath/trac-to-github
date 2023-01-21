@@ -50,12 +50,14 @@ keywords_to_labels: {
  'doc': 'c: documentation',
  'cygwin': 'c: porting: cygwin',
  'python3': 'c: python3',
+ 'py3': 'c: python3',
  'build': 'c: build',
  'spkg-configure': 'c: build: configure',
  'linear algebra': 'c: linear algebra',
  'asymptotics': 'c: asymptotic expansions',
  'calculus': 'c: calculus',
  'categories': 'c: categories',
+ 'category': 'c: categories',
  'docker': 'c: docker',
  'elliptic curve': 'c: elliptic curves',
  'elliptic curves': 'c: elliptic curves',
@@ -67,6 +69,7 @@ keywords_to_labels: {
  'number fields': 'c: number fields',
  'database': 'c: databases',
  'doctest': 'doctest coverage',
+ 'doctests': 'doctest coverage',
  'coverage': 'doctest coverage',
  'performance': 'performance',
  'game theory': 'c: game theory',
@@ -80,8 +83,13 @@ keywords_to_labels: {
  'finite_state_machine': 'c: finite state machines',
  'groups': 'c: group theory',
  'interact': 'c: interact',
+ 'matroid': 'c: matroid theory',
  'modular': 'c: modular forms',
+ 'padic': 'c: padics',
  'padics': 'c: padics',
+ 'p-adic': 'c: padics',
+ 'p-adics': 'c: padics',
+ 'pickling': 'c: pickling',
  'combinatorics': 'c: combinatorics',
  'solaris': 'c: porting: solaris',
  'graphics': 'c: graphics',
@@ -206,7 +214,7 @@ label_colors = {
  'performance': '696969',
  'refactoring': '696969',
  'doctest coverage': '696969',
- 'resolution': 'a6a6a6'}
+ 'resolution': 'c6c6c6'}
 
 [attachments]
 
