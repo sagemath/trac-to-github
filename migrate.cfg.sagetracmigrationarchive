@@ -278,6 +278,10 @@ usernames = {
  'Winfried': 'w-bruns',
  'asmeurer': 'asmeurer',
  'benjaminjones': 'benjaminfjones',
+ 'alexk': 'alex-konovalov',
+ 'ebriand': 'EmmanuelJeanBriand',
+ 'justin': 'RalphieBoy',
+ 'anna': 'annahaensch',
  # Typos and ad-hoc mentions
  'wstein': 'williamstein',
  'fhivert': 'hivert',
@@ -339,12 +343,15 @@ usernames = {
  'Anne': 'anneschilling',
  'fchapoton': 'fchapoton',
  'chapton': 'fchapoton',
+ 'chaperon': 'fchapoton',
  'bhackl': 'behackl',
  'bsalisbury': 'bsalisbury1',
  'bsalisbury01': 'bsalisbury1',
  'brucin': 'burcin',
  'burchin': 'burcin',
+ 'berocal': 'burcin',
  'ccitro': 'craigcitro',
+ 'Dreyer': 'alexanderdreyer',
  'ebray': 'embray',
  'fsaliola': 'saliola',
  'fidelbarerra': 'sagetrac-fidelbarrera',
@@ -364,6 +371,9 @@ usernames = {
  'jstarx': 'sagetrac-JStarx',
  'mmezzaroba': 'mezzarobba',
  'monteil': 'sagetrac-tmonteil',
+ 'nahtann': 'nathanncohen',
+ 'nbrun': 'nbruin',
+ 'ondrej': 'certik',
  'RossK': 'sagetrac-rossk',
  'sage-combant': 'sagetrac-sage-combinat',
  'sage-combinat-devel': 'sagetrac-sage-combinat',
@@ -387,10 +397,6 @@ usernames = {
  'delecroix': 'videlec',
  'xcaruso': 'xcaruso',
  'Zabrocki': 'zabrocki',
- 'Zimmermann': 'zimmermann6',
- 'ebriand': 'EmmanuelJeanBriand',
- 'justin': 'RalphieBoy',
- 'anna': 'annahaensch',
- }
+ 'Zimmermann': 'zimmermann6'}
 
 unknown_users_prefix: sagetrac-
