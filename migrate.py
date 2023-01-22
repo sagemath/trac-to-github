@@ -2400,7 +2400,7 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
                         #event_data['commit_repository'] = target_url_git_repo
                         event_data['commit_repository'] = target_url_issues_repo
                 gh_update_issue_property(dest, issue, 'state', newstate, **event_data)
-            return issue_state, new_labels
+            return newstate, new_labels
 
         attachments = []
         for change in changelog:
