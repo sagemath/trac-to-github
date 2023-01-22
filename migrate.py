@@ -2329,13 +2329,14 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
             issue_data['reactions'] = []
             assignees = gh_user_url_list(dest, tmp_src_ticket_data.pop('owner'))
             issue_data['assignees'] = assignees
+
             # Find closed_at
             for time, author, change_type, oldvalue, newvalue, permanent in reversed(changelog):
                 if change_type == 'status':
                     state, label = map_status(newvalue)
                     if state == 'closed':
                         issue_data['closed_at'] = convert_xmlrpc_datetime(time)
-                        break
+                    break  # on the last status change
 
         issue_data['description'] = issue_description(tmp_src_ticket_data)
 
@@ -2399,7 +2400,7 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
                         #event_data['commit_repository'] = target_url_git_repo
                         event_data['commit_repository'] = target_url_issues_repo
                 gh_update_issue_property(dest, issue, 'state', newstate, **event_data)
-            return issue_state, new_labels
+            return newstate, new_labels
 
         attachments = []
         for change in changelog:
