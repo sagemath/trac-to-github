@@ -61,9 +61,8 @@ See also: https://trac.sagemath.org/ticket/30363
     - **Type** ("defect", "enhancement", "task") are mapped to "Labels" "bug", "enhancement".
     - **Component** ("basic arithmetic", "linear algebra", "geometry", ...) are mapped to "Labels" 
       with prefix `c: `
-    - **Priority** ("trivial"/"minor"/"major"/"critical"/"blocker") are mapped to "Labels" of the same name;
-      no Label for the default priority "major".
-    - **Keywords** can be mapped to "Labels"
+    - **Priority** ("trivial"/"minor"/"major"/"critical"/"blocker") are mapped to "Labels" with prefix `p: `
+    - **Keywords** just add them in free form to the issue description if there's no suitable "Label"
     - **Cc**: use `@USERNAME` either in the Issue description or in any comment. 
       - Optionally, regular developers who would like to get notified automatically when a PR touches a particular part of the sage code can add themselves as a [Code Owner](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners).
     - **Description** becomes just the first comment on the Issue
@@ -73,7 +72,7 @@ See also: https://trac.sagemath.org/ticket/30363
       are replaced by
       - [marking as duplicate](https://docs.github.com/en/issues/tracking-your-work-with-issues/marking-issues-or-pull-requests-as-a-duplicate), 
       - "Labels" "duplicate", "invalid", "wontfix", or
-      - closing with a comment.
+      - closing with a comment; use "Close as not wanted"
     - **Dependencies**: Use the phrase "Depends on ", followed by the Issue or PR reference.
       Repeat this in separate lines if there is more than one dependency.
       This format is understood by various dependency managers: See https://www.dpulls.com/,
