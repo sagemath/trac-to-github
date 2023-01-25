@@ -2392,7 +2392,7 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
                                     'attachment_name': newvalue})
             elif change_type == "comment":
                 # oldvalue is here either x or y.x, where x is the number of this comment and y is the number of the comment that is replied to
-                m = re.match('([0-9]+.)?([0-9]+)', oldvalue)
+                m = re.fullmatch(r'([0-9]+[.])?([0-9]+)', oldvalue)
                 x = m and m.group(2)
                 desc = newvalue.strip();
                 if not desc and not attachments:

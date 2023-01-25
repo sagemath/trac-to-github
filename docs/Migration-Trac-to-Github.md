@@ -85,9 +85,15 @@ See also: https://trac.sagemath.org/ticket/30363
   - [Create the PR](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request)
   - If it is not ready for review, [mark the PR as a "Draft"](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/changing-the-stage-of-a-pull-request)
 
-- For contributing a change that addresses an existing open Issue, **instead of pushing a git branch to a Trac ticket**:
+- For contributing a change that addresses an existing open Issue that has been created on GitHub, **instead of pushing a git branch to a Trac ticket**:
   - same as above
   - [use `Fixes #ISSUENUMBER` to link to an existing issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue); this will auto-close the linked Issue when the PR is merged.
+
+- For contributing a change that addresses an existing open Issue that has been migrated from Trac, **instead of pushing a git branch to a Trac ticket**:
+  - Pull the branch from your read-only `trac` remote (see section *One time action: Instead of adding a git remote named trac*) as you use to do before.
+  - Edit and commit your changes
+  - Push the branch to the remote named `origin`, i.e., to your fork
+  - Follow the instructions above from there
 
 - For finding PRs that are waiting for review, **instead of using Trac ticket reports**:
   - [filter PRs by review status](https://docs.github.com/en/issues/tracking-your-work-with-issues/filtering-and-searching-issues-and-pull-requests#filtering-pull-requests-by-review-status)
@@ -146,11 +152,11 @@ Conversion script: https://github.com/sagemath/trac-to-github
 Preview of the converted issues:
 - Iteration 0 (2022-09): A few issues converted from Trac tickets at https://github.com/sagemath/trac_to_gh/issues?q=is%3Aissue
 - Iterations 1–50 (2022-12): Migration archive (all 35000 issues) formatted as Markdown at https://github.com/sagemath/trac_to_gh/tree/main/Issues-11xxx etc.
-- TBD: Migration archive imported into a GitHub Enterprise Server instance
+- Iterations 51- (2023-01): Migration archive imported into a GitHub Enterprise Server instance https://34.105.185.241/sagemath
 
 Preview of the converted wiki: https://github.com/sagemath/trac_to_gh/wiki
 
-Switchover day (date to be determined; proposed: Feb 1, 2023):
+Switchover day (confirmed: Feb 1, 2023):
 - Steps see https://github.com/sagemath/trac-to-github/issues/73
 
 # Retrieving data from GitHub
