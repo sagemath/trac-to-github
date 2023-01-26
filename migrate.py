@@ -238,9 +238,9 @@ ignored_values = []
 if config.has_option('issues', 'ignored_values'):
     ignored_values = ast.literal_eval(config.get('issues', 'ignored_values'))
 
-ignored_usernames = set([])
-if config.has_option('issues', 'ignored_usernames'):
-    ignored_usernames = set(ast.literal_eval(config.get('issues', 'ignored_usernames')))
+ignored_names = set([])
+if config.has_option('issues', 'ignored_names'):
+    ignored_names = set(ast.literal_eval(config.get('issues', 'ignored_names')))
 
 ignored_mentions = set([])
 if config.has_option('issues', 'ignored_mentions'):
@@ -778,23 +778,23 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
         line_temporary = line.lstrip()
         if line_temporary.startswith('{{{') and in_code:
             level += 1
-        elif line_temporary.startswith('{{{#!td'):
+        elif re.match(r'{{{\s*#!td', line_temporary):
             in_td = True
             in_td_level = level
             in_td_prefix = re.search('{{{', line).start()
             in_td_n = 0
             in_td_defect = 0
-            line =  re.sub(r'{{{#!td', r'%s' % proc_td.open, line)
+            line =  re.sub(r'{{{\s*#!td', r'%s' % proc_td.open, line)
             level += 1
-        elif line_temporary.startswith('{{{#!html') and not (in_code or in_html):
+        elif re.match(r'{{{\s*#!html', line_temporary) and not (in_code or in_html):
             in_html = True
             in_html_level = level
             in_html_prefix = re.search('{{{', line).start()
             in_html_n = 0
             in_html_defect =0
-            line =  re.sub(r'{{{#!html', r'', line)
+            line =  re.sub(r'{{{\s*#!html', r'', line)
             level += 1
-        elif line_temporary.startswith('{{{#!') and not (in_code or in_html):  # code: python, diff, ...
+        elif re.match(r'{{{\s*#!', line_temporary) and not (in_code or in_html):  # code: python, diff, ...
             in_code = True
             in_code_level = level
             in_code_prefix = re.search('{{{', line).start()
@@ -802,7 +802,7 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
             in_code_defect = 0
             if non_blank_previous_line:
                 line = '\n' + line
-            line =  re.sub(r'{{{#!([^\s]+)', r'%s\1' % proc_code.open, line)
+            line =  re.sub(r'{{{\s*#!([^\s]+)', r'%s\1' % proc_code.open, line)
             level += 1
         elif line_temporary.rstrip() == '{{{' and not (in_code or in_html):
             # check dangling #!...
@@ -831,7 +831,7 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
             else:
                 if non_blank_previous_line:
                     line = '\n' + line
-                line = line.replace('{{{', proc_code.open, +'\n' , 1)
+                line = line.replace('{{{', proc_code.open + '\n' , 1)
             level += 1
         elif line_temporary.rstrip() == '}}}':
             level -= 1
@@ -1251,7 +1251,7 @@ class WikiConversionHelper:
             label = 'comment:{}'.format(comment)
         else:
             label = match.group(2)
-        return escape(r'%s%s%s(#comment:%s)' % (link_displ.open, label, link_displ.close, comment))
+        return escape(r'%s%s%s(#comment%s%s)' % (link_displ.open, label, link_displ.close, '%3A', comment))
 
     def image_link(self, match):
         """
@@ -1884,7 +1884,7 @@ def convert_trac_username(origname, is_mention=False):
         return None
     if is_mention and origname in ignored_mentions:
         return None
-    if origname in ignored_usernames:
+    if origname in ignored_names:
         return None
     origname = origname.strip('\u200b').rstrip('.')
     if origname.startswith('gh-'):
