@@ -2093,32 +2093,37 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
             description_pre = ""
             description_post = ""
 
+            description_post_items = []
+
+            depends = ""
             dependencies = src_ticket_data.pop('dependencies', '')
             other_deps = []
             for dep in dependencies.replace(';', ' ').replace(',', ' ').split():
                 dep = dep.strip()
                 if m := re.fullmatch('#?([0-9]+)', dep):
-                    if not description_post:
-                        description_post += '\n'
+                    if depends:
+                        depends += '\n'
                     # Use this phrase, used by various dependency managers:
                     # https://www.dpulls.com/
                     # https://github.com/z0al/dependent-issues
                     # https://github.com/gregsdennis/dependencies-action/pull/5
-                    description_post += f'\nDepends on #{m.group(1)}'
+                    depends += f'Depends on #{m.group(1)}'
                 elif dep:
                     # some free form remark in Dependencies
                     other_deps.append(dep)
             if other_deps:
                 # put it back
                 src_ticket_data['dependencies'] = dependencies
+            if depends:
+                description_post_items.append(depends)
 
             owner = gh_username_list(dest, src_ticket_data.pop('owner', None))
             if owner:
-                description_post += f'\n\nAssignee: {attr_value(owner)}'
+                description_post_items.append(f'Assignee: {attr_value(owner)}')
 
             version = src_ticket_data.pop('version', None)
             if version is not None and version != 'trunk' :
-                description_post += f'\n\nVersion: {attr_value(version)}'
+                description_post_items.append(f'Version: {attr_value(version)}')
 
             # subscribe persons in cc
             cc = src_ticket_data.pop('cc', '')
@@ -2128,26 +2133,26 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
                 if person == '' : continue
                 person = gh_username(dest, person)
                 ccstr += ' ' + person
-            if ccstr != '' :
-                description_post += '\n\nCC: ' + ccstr
+            if ccstr != '':
+                description_post_items.append('CC: ' + ccstr)
 
             keywords, labels = map_keywords(src_ticket_data.pop('keywords', ''))
             if keywords:
-                description_post += '\n\nKeywords: ' + attr_value(', '.join(keywords))
+                description_post_items.append('Keywords: ' + attr_value(', '.join(keywords)))
 
             branch = src_ticket_data.pop('branch', '')
             commit = src_ticket_data.pop('commit', '')
             # These two are the same in all closed-fixed tickets. Reduce noise.
             if branch and commit:
                 if branch == commit:
-                    description_post += '\n\nBranch/Commit: ' + attr_value(github_ref_markdown(branch))
+                    description_post_items.append('Branch/Commit: ' + attr_value(github_ref_markdown(branch)))
                 else:
-                    description_post += '\n\nBranch/Commit: ' + attr_value(github_ref_markdown(branch) + ' @ ' + github_ref_markdown(commit))
+                    description_post_items.append('Branch/Commit: ' + attr_value(github_ref_markdown(branch) + ' @ ' + github_ref_markdown(commit)))
             else:
                 if branch:
-                    description_post += f'\n\nBranch: ' + attr_value(github_ref_markdown(branch))
+                    description_post_items.append(f'Branch: ' + attr_value(github_ref_markdown(branch)))
                 if commit:
-                    description_post += f'\n\nCommit: ' + attr_value(github_ref_markdown(commit))
+                    description_post_items.append(f'Commit: ' + attr_value(github_ref_markdown(commit)))
 
             description = src_ticket_data.pop('description', '')
 
@@ -2156,7 +2161,21 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
                     and field not in ['changetime', 'time']
                     and value and value not in ignored_values):
                     field = field.title().replace('_', ' ')
-                    description_post += f'\n\n{field}: {attr_value(value)}'
+                    description_post_items.append(f'{field}: {attr_value(value)}')
+
+            # Sort description items
+            order = ['depends', 'upstream', 'cc: ', 'component', 'keywords', 'assignee', 'author', 'branch', 'commit', 'reviewer', 'merged']
+            sort_order = [item[:4].lower() for item in order]  # weigh only initial 4 characters
+
+            def item_key(x):
+                initial = x[:4].lower()
+                try:
+                    return str(sort_order.index(initial))
+                except ValueError:
+                    return initial
+
+            description_post_items = sorted(description_post_items, key=item_key)
+            description_post += '\n\n' + '\n\n'.join(description_post_items)
 
             description_post += f'\n\n_Issue created by migration from {trac_url_ticket}/{src_ticket_id}_\n\n'
 
