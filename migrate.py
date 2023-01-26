@@ -1781,7 +1781,8 @@ def gh_comment_issue(dest, issue, comment, src_ticket_id, comment_id=None, minim
 
     if comment_id:
         if (note.startswith('Branch pushed to git repo;') or
-            note.startswith('New commits:')):
+            note.startswith('New commits:') or
+            re.match(r'^Last \d+ new commits:', note)):
             anchor = f'<div id="comment:{comment_id}"></div>\n\n'
         else:
             anchor = f'<div id="comment:{comment_id}" align="right">comment:{comment_id}</div>\n\n'
