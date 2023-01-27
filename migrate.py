@@ -338,7 +338,8 @@ RE_HTTPS4 = re.compile(r'\[(https?://[^\s\[\]\|]+)\]')
 RE_TICKET_COMMENT1 = re.compile(r'\[\[ticket:([1-9]\d*)#comment:([1-9]\d*)\s*\|\s*(.+?)\]\]')
 RE_TICKET_COMMENT2 = re.compile(r'\[\[ticket:([1-9]\d*)#comment:([1-9]\d*)\]\]')
 RE_TICKET_COMMENT3 = re.compile(r'\[ticket:([1-9]\d*)#comment:([1-9]\d*)\s+(.*?)\]')
-RE_TICKET_COMMENT4 = re.compile(r'ticket:([1-9]\d*)#comment:([1-9]\d*)')
+RE_TICKET_COMMENT4 = re.compile(r'\[ticket:([1-9]\d*)#comment:([0])\s+(.*?)\]')
+RE_TICKET_COMMENT5 = re.compile(r'ticket:([1-9]\d*)#comment:([1-9]\d*)')
 RE_COMMENT1 = re.compile(r'\[\[comment:([1-9]\d*)\s*\|\s*(.+?)\]\]')
 RE_COMMENT2 = re.compile(r'\[comment:([1-9]\d*)\s+(.*?)\]')
 RE_COMMENT3 = re.compile(r'(?<=\s)comment:([1-9]\d*)')  # need to exclude the string as part of http url
@@ -479,11 +480,14 @@ class TracUrlConversionHelper(SourceUrlConversionHelper):
             return gh_attachment_url(ticket_id, filename)
 
         TICKET1 = [r'/(\d+)#comment:(\d+)?', subdir.ticket, r'ticket:\1#comment:\2']
-        TICKET2 = [r'/(\d+)', subdir.ticket.optional_path(), r'%s/issues/\1' % target_url_issues_repo]
+        TICKET2 = [r'/(\d+)#comment:(\d+)?', subdir.ticket.optional_path(), r'ticket:\1#comment:\2']
+        TICKET3 = [r'/(\d+)', subdir.ticket, r'%s/issues/\1' % target_url_issues_repo]
+        TICKET4 = [r'/(\d+)', subdir.ticket.optional_path(), r'%s/issues/\1' % target_url_issues_repo]
         WIKI1= [r'/([/\-\w0-9@:%._+~#=]+)', subdir.wiki, convert_wiki_link]
         ATTACHMENT1 = [r'/(\d+)/([/\-\w0-9@:%._+~#=]+)', subdir.attachment_ticket, convert_ticket_attachment]
         ATTACHMENT2 = [r'/(\d+)/([/\-\w0-9@:%._+~#=]+)', subdir.attachment_ticket.optional_path(), convert_ticket_attachment]
-        ATTACHMENT3 = [r'/(\d+)/([/\-\w0-9@:%._+~#=]+)', subdir.raw_attachment_ticket.optional_path(), convert_ticket_attachment]
+        ATTACHMENT3 = [r'/(\d+)/([/\-\w0-9@:%._+~#=]+)', subdir.raw_attachment_ticket, convert_ticket_attachment]
+        ATTACHMENT4 = [r'/(\d+)/([/\-\w0-9@:%._+~#=]+)', subdir.raw_attachment_ticket.optional_path(), convert_ticket_attachment]
 
 class CgitConversionHelper(SourceUrlConversionHelper):
     """
@@ -636,6 +640,7 @@ cgit_conv_help = CgitConversionHelper(cgit_url)
 
 RE_WRONG_FORMAT1 = re.compile(r'comment:(\d+):ticket:(\d+)')
 RE_REPLYING_TO = re.compile(r'Replying to \[comment:(\d+)\s([\-\w0-9@._]+)\]')
+RE_REPLYING_TO_TICKET = re.compile(r'Replying to \[ticket:(\d+)\s([\-\w0-9@._]+)\]')
 
 def inline_code_snippet(match):
     code = match.group(1)
@@ -655,6 +660,17 @@ def convert_replying_to(match):
         name = username
 
     return 'Replying to [comment:{} {}]'.format(comment_id, name)
+
+def convert_replying_to_ticket(match):
+    ticket_id = match.group(1)
+    username = match.group(2)
+    name = convert_trac_username(username)
+    if name:  # github username
+        name = '@' + name
+    else:
+        name = username
+
+    return 'Replying to [ticket:{}#comment:0 {}]'.format(ticket_id, name)
 
 def commits_list(match):
     t = match.group(1) + '\n'
@@ -698,6 +714,7 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
     # some normalization
     text = RE_WRONG_FORMAT1.sub(r'ticket:\2#comment:\1', text)
     text = RE_REPLYING_TO.sub(convert_replying_to, text)
+    text = RE_REPLYING_TO_TICKET.sub(convert_replying_to_ticket, text)
 
     text = re.sub('\r\n', '\n', text)
     text = re.sub(r'\swiki:([a-zA-Z]+)', r' [wiki:\1]', text)
@@ -735,6 +752,7 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
     in_html = False
     in_list = False
     in_table = False
+    quote_depth_decreased = False
     block = []
     table = []
     list_indents = []
@@ -751,12 +769,14 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
         if line.startswith(quote_prefix):
             line = line[len(quote_prefix):]
         else:
-            if in_code:  # to recover from interrupted codeblock
+            if in_code or in_html:  # to recover from interrupted codeblock
+                text_lines.append(line)  # put it back
                 text_lines.append(quote_prefix + '}}}')
+                line = non_blank_previous_line
                 continue
 
-            if line:
-                a.append('')  # effectively insert a blank line when quote depth decreases
+            if line:  # insert a blank line when quote depth decreased
+                quote_depth_decreased = True
             quote_prefix = ''
 
         if not (in_code or in_html):
@@ -769,6 +789,9 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
             if m:
                 prefix += m.group(1)
             quote_prefix += prefix
+            if quote_depth_decreased:
+                a.append(quote_prefix)
+                quote_depth_decreased = False
             line = line[len(prefix):]
 
         if previous_line:
@@ -942,6 +965,7 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
             line = RE_TICKET_COMMENT2.sub(conv_help.ticket_comment_link, line)
             line = RE_TICKET_COMMENT3.sub(conv_help.ticket_comment_link, line)
             line = RE_TICKET_COMMENT4.sub(conv_help.ticket_comment_link, line)
+            line = RE_TICKET_COMMENT5.sub(conv_help.ticket_comment_link, line)
 
             line = RE_COMMENT1.sub(conv_help.comment_link, line)
             line = RE_COMMENT2.sub(conv_help.comment_link, line)
@@ -2091,7 +2115,7 @@ def convert_issues(source, dest, only_issues = None, blacklist_issues = None):
             return 'none'
 
         def issue_description(src_ticket_data):
-            description_pre = ""
+            description_pre = '<div id="comment:0"></div>\n\n'
             description_post = ""
 
             description_post_items = []
