@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 '''
-Copyright © 2022 Matthias Koeppe
-                 Kwankyu Lee
-                 Sebastian Oehms
-                 Dima Pasechnik
+Copyright © 2022-2023 Matthias Koeppe
+                      Kwankyu Lee
+                      Sebastian Oehms
+                      Dima Pasechnik
 
 Modified and extended for the migration of SageMath from Trac to GitHub.
 
@@ -352,6 +352,9 @@ RE_ATTACHMENT5 = re.compile(r'(?<=\s)attachment:([^\s]+)\.\s')
 RE_ATTACHMENT6 = re.compile(r'^attachment:([^\s]+)\.\s')
 RE_ATTACHMENT7 = re.compile(r'(?<=\s)attachment:([^\s]+)')
 RE_ATTACHMENT8 = re.compile(r'^attachment:([^\s]+)')
+RE_LINEBREAK1= re.compile(r'(\[\[br\]\])')
+RE_LINEBREAK2 = re.compile(r'(\[\[BR\]\])')
+RE_LINEBREAK3 = re.compile(r'(\\\\\s*)')
 RE_WIKI1 = re.compile(r'\[\["([^\]\|]+)["]\s*([^\[\]"]+)?["]?\]\]')
 RE_WIKI2 = re.compile(r'\[\[\s*([^\]|]+)[\|]([^\[\]]+)\]\]')
 RE_WIKI3 = re.compile(r'\[\[\s*([^\]]+)\]\]')
@@ -399,6 +402,9 @@ class CodeTag:
         self._code = code
 
 at_sign = CodeTag('AT__SIGN__IN__CODE', '@')
+linebreak_sign1 =  CodeTag('LINEBREAK__SIGN1__IN__CODE', r'\\')
+linebreak_sign2 =  CodeTag('LINEBREAK__SIGN2__IN__CODE', r'[[br]]')
+linebreak_sign3 =  CodeTag('LINEBREAK__SIGN3__IN__CODE', r'[[BR]]')
 
 class Brackets:
     """
@@ -645,7 +651,10 @@ RE_REPLYING_TO_TICKET = re.compile(r'Replying to \[ticket:(\d+)\s([\-\w0-9@._]+)
 
 def inline_code_snippet(match):
     code = match.group(1)
-    code = code.replace('@', at_sign.tag)
+    code = code.replace(r'@', at_sign.tag)
+    code = code.replace(r'\\', linebreak_sign1.tag)
+    code = code.replace(r'[[br]]', linebreak_sign2.tag)
+    code = code.replace(r'[[BR]]', linebreak_sign3.tag)
     if '`' in code:
         return '<code>' + code.replace('`', r'\`') + '</code>'
     else:
@@ -722,8 +731,6 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
 
     text = re.sub(r'\[\[TOC[^]]*\]\]', '', text)
     text = re.sub(r'(?m)\[\[PageOutline\]\]\s*\n', '', text)
-    text = text.replace('[[BR]]', '\n')
-    text = text.replace('[[br]]', '\n')
 
     if multilines:
         text = re.sub(r'^\S[^\n]+([^=-_|])\n([^\s`*0-9#=->-_|])', r'\1 \2', text)
@@ -929,6 +936,7 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
                     new_line += converted_part
 
                     start = end
+
             line = new_line
 
         if not (in_code or in_html):
@@ -946,6 +954,14 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
             line = RE_HEADING4a.sub(heading_replace, line)
             line = RE_HEADING5a.sub(heading_replace, line)
             line = RE_HEADING6a.sub(heading_replace, line)
+
+            # code surrounded by underline, mistaken as italics by github
+            line = RE_UNDERLINED_CODE1.sub(r'`_\1_`', line)
+            line = RE_UNDERLINED_CODE2.sub(r'`_\1_`', line)
+            line = RE_UNDERLINED_CODE3.sub(r'`_\1_`', line)
+
+            # code snippet
+            line = RE_CODE_SNIPPET.sub(inline_code_snippet, line)
 
             line = RE_SUPERSCRIPT1.sub(r'<sup>\1</sup>', line)  # superscript ^abc^
             line = RE_SUBSCRIPT1.sub(r'<sub>\1</sub>', line)  # subscript ,,abc,,
@@ -982,6 +998,13 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
             line = RE_ATTACHMENT7.sub(conv_help.attachment, line)
             line = RE_ATTACHMENT8.sub(conv_help.attachment, line)
 
+            if in_table:
+                line = RE_LINEBREAK1.sub('<br/>', line)
+                line = RE_LINEBREAK2.sub('<br/>', line)
+            else:
+                line = RE_LINEBREAK1.sub('\n', line)
+                line = RE_LINEBREAK2.sub('\n', line)
+
             line = RE_WIKI1.sub(conv_help.wiki_link, line)
             line = RE_WIKI2.sub(conv_help.wiki_link, line)
             line = RE_WIKI3.sub(conv_help.wiki_link, line)  # wiki link without display text
@@ -999,13 +1022,6 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
 
             line = RE_TICKET1.sub(r' #\1', line) # replace global ticket references
             line = RE_TICKET2.sub(conv_help.ticket_link, line)
-
-            # code surrounded by underline, mistaken as italics by github
-            line = RE_UNDERLINED_CODE1.sub(r'`_\1_`', line)
-            line = RE_UNDERLINED_CODE2.sub(r'`_\1_`', line)
-            line = RE_UNDERLINED_CODE3.sub(r'`_\1_`', line)
-
-            line = RE_CODE_SNIPPET.sub(inline_code_snippet, line)
 
             # to avoid unintended github mention
             line = RE_GITHUB_MENTION1.sub(github_mention, line)
@@ -1119,6 +1135,29 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
                 elif t == 'i':
                     line = line.replace('i', toRoman(c).lower(), 1)
 
+            # take care of line break "\\", which often occurs in code snippets
+            l = len(line)
+            new_line = ''
+            start = 0
+            inline_code = False
+            for i in range(l + 1):
+                if i == l or line[i] == '`':
+                    end = i
+                    part = line[start:end]
+                    if not inline_code:
+                        if in_table:
+                            part = RE_LINEBREAK3.sub('<br/>', part)
+                        else:
+                            part = RE_LINEBREAK3.sub('\n', part)
+                    new_line += part
+                    start = end
+                    if i < l and line[i] == '`':
+                        if not inline_code:
+                            inline_code = True
+                        else:
+                            inline_code = False
+            line = new_line
+
         # only for table with td blocks:
         if in_table:
             if line == '|\\' or line == '| \\':  # leads td block
@@ -1171,14 +1210,21 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
     a = a[:-1]
     text = '\n'.join(a)
 
+    # close unclosed codeblock
+    if in_code or in_html:
+        text += '\n%s' % proc_code.close
+
     # remove artifacts
     text = proc_code.replace(text)
     text = link_displ.replace(text)
     text = at_sign.replace(text)
+    text = linebreak_sign1.replace(text)
+    text = linebreak_sign2.replace(text)
+    text = linebreak_sign3.replace(text)
 
     # Some rewritings
     text = RE_COLOR.sub(r'$\\textcolor{\1}{\\text{\2}}$', text)
-    text = RE_TRAC_REPORT.sub(r'[Trac report of id \1 inherited from the migration](%s/\1)' % trac_url_report, text)
+    text = RE_TRAC_REPORT.sub(r'[Trac report of id \1](%s/\1)' % trac_url_report, text)
     text = RE_NEW_COMMITS.sub(commits_list, text)
     text = RE_LAST_NEW_COMMITS.sub(commits_list, text)
 
@@ -1359,8 +1405,8 @@ class WikiConversionHelper:
             macro = macro_split[0]
             args = None
             if len(macro_split) > 1:
-                args =  macro_split[1]
-            display = 'This is the Trac macro *%s* that was inherited from the migration' % macro
+                args =  macro_split[1][:-1]  # remove ')'
+            display = 'Trac macro *%s*' % macro
             link = '%s/WikiMacros#%s-macro' % (trac_url_wiki, macro)
             if args:
                 return self.protect_wiki_link('%s called with arguments (%s)' % (display, args), link)
