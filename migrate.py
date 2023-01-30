@@ -331,6 +331,7 @@ RE_IMAGE2 = re.compile(r'\[\[Image\(([^),]+)\)\]\]')
 RE_IMAGE3 = re.compile(r'\[\[Image\(([^),]+),\slink=([^(]+)\)\]\]')
 RE_IMAGE4 = re.compile(r'\[\[Image\((http[^),]+),\s([^)]+)\)\]\]')
 RE_IMAGE5 = re.compile(r'\[\[Image\(([^),]+),\s([^)]+)\)\]\]')
+RE_IMAGE6 = re.compile(r'\[\[Image\(([^),]+),\s*([^)]+),\s*([^)]+)\)\]\]')
 RE_HTTPS1 = re.compile(r'\[\[(https?://[^\s\]\|]+)\s*\|\s*(.+?)\]\]')
 RE_HTTPS2 = re.compile(r'\[\[(https?://[^\]]+)\]\]')
 RE_HTTPS3 = re.compile(r'\[(https?://[^\s\[\]\|]+)\s*[\s\|]\s*([^\[\]]+)\]')
@@ -356,7 +357,7 @@ RE_LINEBREAK1= re.compile(r'(\[\[br\]\])')
 RE_LINEBREAK2 = re.compile(r'(\[\[BR\]\])')
 RE_LINEBREAK3 = re.compile(r'(\\\\\s*)')
 RE_WIKI1 = re.compile(r'\[\["([^\]\|]+)["]\s*([^\[\]"]+)?["]?\]\]')
-RE_WIKI2 = re.compile(r'\[\[\s*([^\]|]+)[\|]([^\[\]]+)\]\]')
+RE_WIKI2 = re.compile(r'\[\[\s*([^\]|]+)[\|]([^\[\]\|]+)\]\]')
 RE_WIKI3 = re.compile(r'\[\[\s*([^\]]+)\]\]')
 RE_WIKI4 = re.compile(r'\[wiki:"([^\[\]\|]+)["]\s*([^\[\]"]+)?["]?\]')
 RE_WIKI5 = re.compile(r'\[wiki:([^\s\[\]\|]+)\s*[\s\|]\s*([^\[\]]+)\]')
@@ -976,7 +977,8 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
             line = RE_IMAGE2.sub(conv_help.image_link, line)
             line = RE_IMAGE3.sub(conv_help.image_link, line)
             line = RE_IMAGE4.sub(r'<img src="\1" \2>', line)
-            line = RE_IMAGE5.sub(conv_help.wiki_image, line)  # \2 is the image width
+            line = RE_IMAGE5.sub(conv_help.wiki_image, line)  # \2 is image width
+            line = RE_IMAGE6.sub(conv_help.image_link, line)  # \2 is image width, \3 is alignment
 
             line = RE_TICKET_COMMENT1.sub(conv_help.ticket_comment_link, line)
             line = RE_TICKET_COMMENT2.sub(conv_help.ticket_comment_link, line)
@@ -1005,9 +1007,6 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
                 line = RE_LINEBREAK1.sub('\n', line)
                 line = RE_LINEBREAK2.sub('\n', line)
 
-            line = RE_WIKI1.sub(conv_help.wiki_link, line)
-            line = RE_WIKI2.sub(conv_help.wiki_link, line)
-            line = RE_WIKI3.sub(conv_help.wiki_link, line)  # wiki link without display text
             line = RE_WIKI4.sub(conv_help.wiki_link, line)  # for pagenames containing whitespaces
             line = RE_WIKI5.sub(conv_help.wiki_link, line)
             line = RE_WIKI6.sub(conv_help.wiki_link, line)  # link without display text
@@ -1149,6 +1148,11 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
                             part = RE_LINEBREAK3.sub('<br/>', part)
                         else:
                             part = RE_LINEBREAK3.sub('\n', part)
+
+                        part = RE_WIKI1.sub(conv_help.wiki_link, part)
+                        part = RE_WIKI2.sub(conv_help.wiki_link, part)
+                        part = RE_WIKI3.sub(conv_help.wiki_link, part)
+
                     new_line += part
                     start = end
                     if i < l and line[i] == '`':
@@ -1400,16 +1404,28 @@ class WikiConversionHelper:
             link = pagename_ori.replace('/', ' ').replace(' ', '-')  # convert to github link
             return self.protect_wiki_link(display, link)
         else:
-            # we assume that this is a Trac macro like TicketQuery
-            macro_split = pagename.split('(')
-            macro = macro_split[0]
-            args = None
-            if len(macro_split) > 1:
-                args =  macro_split[1][:-1]  # remove ')'
-            display = 'Trac macro *%s*' % macro
-            link = '%s/WikiMacros#%s-macro' % (trac_url_wiki, macro)
+            # We assume that this is a Trac macro like TicketQuery
+            m = re.fullmatch(r'[a-zA-Z]+[?]?', pagename)
+            if m:
+                macro = m.group(0)
+                args = None
+            else:
+                m = re.fullmatch(r'([a-zA-Z]+[?]?)\((.+)\)', pagename)
+                if m:
+                    macro = m.group(1)
+                    args = m.group(2)
+                else:
+                    macro = None
+                    args = None
+            if macro:
+                display = 'Trac macro %s' % macro
+                link = '%s/WikiMacros#%s-macro' % (trac_url_wiki, macro)
+            else:
+                return link_displ.open + link_displ.open + mg[0] + link_displ.close + link_displ.close
+
             if args:
-                return self.protect_wiki_link('%s called with arguments (%s)' % (display, args), link)
+                args = args.replace('|', r'\|')
+                return self.protect_wiki_link('%s(%s)' % (display, args), link)
             return self.protect_wiki_link(display, link)
 
     def camelcase_wiki_link(self, match):
@@ -1455,10 +1471,20 @@ class IssuesConversionHelper(WikiConversionHelper):
         in the case of a image link.
         """
         filename = match.group(1)
-        if len(match.groups()) < 2:
+        if len(match.groups()) == 1:
             descr = ''
-        else:
+        elif len(match.groups()) == 2:
             descr = match.group(2)
+        else:
+            if match.group(2).startswith('width='):
+                width = match.group(2)[6:]
+                alignment = match.group(3)
+            elif match.group(3).startswith('width='):
+                width = match.group(3)[6:]
+                alignment = match.group(2)
+            else:
+                width = '100%'
+                alignment = 'center'
 
         if keep_trac_ticket_references:
             url = '%s/ticket/%s/%s' % (trac_url_attachment, str(self._ticket_id), filename)
@@ -1470,6 +1496,10 @@ class IssuesConversionHelper(WikiConversionHelper):
                 url = os.path.join(attachment_export_url, attachment_path(ticket_id, fname))
             else:
                 url = os.path.join(attachment_export_url, attachment_path(self._ticket_id, filename))
+
+        if len(match.groups()) == 3:
+            return r'<div align="%s"><img src="%s" width="%s"></div>' % (alignment, url, width)
+
         return r'!%s%s%s(%s)' % (link_displ.open, descr, link_displ.close, url)
 
     def wiki_link(self, match):
@@ -1512,16 +1542,28 @@ class IssuesConversionHelper(WikiConversionHelper):
                 link = pagename_ori.replace(' ', '-')
             return self.protect_wiki_link(display, '../wiki/' + link)
         else:
-            # we assume that this is a Trac macro like TicketQuery
-            macro_split = pagename.split('(')
-            macro = macro_split[0]
-            args = None
-            if len(macro_split) > 1:
-                args =  macro_split[1][:-1]  # remove ')'
-            display = 'Trac macro *%s*' % macro
-            link = '%s/WikiMacros#%s-macro' % (trac_url_wiki, macro)
+            # We assume that this is a Trac macro like TicketQuery
+            m = re.fullmatch(r'[a-zA-Z]+[?]?', pagename)
+            if m:
+                macro = m.group(0)
+                args = None
+            else:
+                m = re.fullmatch(r'([a-zA-Z]+[?]?)\((.+)\)', pagename)
+                if m:
+                    macro = m.group(1)
+                    args = m.group(2)
+                else:
+                    macro = None
+                    args = None
+            if macro:
+                display = 'Trac macro %s' % macro
+                link = '%s/WikiMacros#%s-macro' % (trac_url_wiki, macro)
+            else:
+                return link_displ.open + link_displ.open + mg[0] + link_displ.close + link_displ.close
+
             if args:
-                return self.protect_wiki_link('%s called with arguments (%s)' % (display, args), link)
+                args = args.replace('|', r'\|')
+                return self.protect_wiki_link('%s(%s)' % (display, args), link)
             return self.protect_wiki_link(display, link)
 
 def github_ref_url(ref):
