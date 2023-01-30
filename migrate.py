@@ -1517,8 +1517,8 @@ class IssuesConversionHelper(WikiConversionHelper):
             macro = macro_split[0]
             args = None
             if len(macro_split) > 1:
-                args =  macro_split[1]
-            display = 'This is the Trac macro *%s* that was inherited from the migration' % macro
+                args =  macro_split[1][:-1]  # remove ')'
+            display = 'Trac macro *%s*' % macro
             link = '%s/WikiMacros#%s-macro' % (trac_url_wiki, macro)
             if args:
                 return self.protect_wiki_link('%s called with arguments (%s)' % (display, args), link)
