@@ -284,10 +284,9 @@ export_dir = archive/attachments
 
 [wiki]
 
-migrate : no
+migrate: yes
 
-#url: https://github.com/sagemath/sage/wiki
-url: https://github.com/sagemath/trac_to_gh/wiki
+url: https://github.com/sagemath/sage/wiki
 
 export_dir: wiki
 

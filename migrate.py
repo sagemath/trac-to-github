@@ -342,9 +342,10 @@ RE_TICKET_COMMENT3 = re.compile(r'\[ticket:([1-9]\d*)#comment:([1-9]\d*)\s+(.*?)
 RE_TICKET_COMMENT4 = re.compile(r'\[ticket:([1-9]\d*)#comment:([0])\s+(.*?)\]')
 RE_TICKET_COMMENT5 = re.compile(r'\[comment:ticket:([1-9]\d*):([1-9]\d*)\s+(.*?)\]')
 RE_TICKET_COMMENT6 = re.compile(r'ticket:([1-9]\d*)#comment:([1-9]\d*)')
-RE_COMMENT1 = re.compile(r'\[\[comment:([1-9]\d*)\s*\|\s*(.+?)\]\]')
-RE_COMMENT2 = re.compile(r'\[comment:([1-9]\d*)\s+(.*?)\]')
-RE_COMMENT3 = re.compile(r'(?<=\s)comment:([1-9]\d*)')  # need to exclude the string as part of http url
+RE_COMMENT1 = re.compile(r'\[\[comment:([1-9]\d*)\]\]')
+RE_COMMENT2 = re.compile(r'\[\[comment:([1-9]\d*)\s*\|\s*(.+?)\]\]')
+RE_COMMENT3 = re.compile(r'\[comment:([1-9]\d*)\s+(.*?)\]')
+RE_COMMENT4 = re.compile(r'(?<=\s)comment:([1-9]\d*)')  # need to exclude the string as part of http url
 RE_ATTACHMENT1 = re.compile(r'\[\[attachment:([^\s\|\]]+)[\s\|](.+?)\]\]')
 RE_ATTACHMENT2 = re.compile(r'\[\[attachment:([^\s]+?)\]\]')
 RE_ATTACHMENT3 = re.compile(r'\[attachment:([^\s\|\]]+)[\s\|](.+?)\]')
@@ -743,7 +744,7 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
         level = len(match.group(1))
         heading = match.group(2).rstrip()
 
-        if create_wiki_link_conversion_table:
+        if not isinstance(conv_help, IssuesConversionHelper) and create_wiki_link_conversion_table:
             with open('wiki_path_conversion_table.txt', "a") as f:
                 f.write(conv_help._trac_wiki_path + '#' + heading.replace(' ', '') + ' '
                         + conv_help._wiki_path + '#' + heading.replace(' ', '-'))
@@ -990,6 +991,7 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
             line = RE_COMMENT1.sub(conv_help.comment_link, line)
             line = RE_COMMENT2.sub(conv_help.comment_link, line)
             line = RE_COMMENT3.sub(conv_help.comment_link, line)
+            line = RE_COMMENT4.sub(conv_help.comment_link, line)
 
             line = RE_ATTACHMENT1.sub(conv_help.attachment, line)
             line = RE_ATTACHMENT2.sub(conv_help.attachment, line)
@@ -1001,8 +1003,8 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
             line = RE_ATTACHMENT8.sub(conv_help.attachment, line)
 
             if in_table:
-                line = RE_LINEBREAK1.sub('<br/>', line)
-                line = RE_LINEBREAK2.sub('<br/>', line)
+                line = RE_LINEBREAK1.sub('<br>', line)
+                line = RE_LINEBREAK2.sub('<br>', line)
             else:
                 line = RE_LINEBREAK1.sub('\n', line)
                 line = RE_LINEBREAK2.sub('\n', line)
@@ -1145,7 +1147,7 @@ def trac2markdown(text, base_path, conv_help, multilines=default_multilines):
                     part = line[start:end]
                     if not inline_code:
                         if in_table:
-                            part = RE_LINEBREAK3.sub('<br/>', part)
+                            part = RE_LINEBREAK3.sub('<br>', part)
                         else:
                             part = RE_LINEBREAK3.sub('\n', part)
 
