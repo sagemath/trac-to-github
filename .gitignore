@@ -6,6 +6,7 @@ trac_cache
 /archive/files
 !/archive/schema.json
 !/archive/organizations_*.json
+!/archive/releases_*.json
 /map-ghe.csv
 /SECRETS
 __pycache__
