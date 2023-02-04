@@ -60,6 +60,7 @@ class MigrationArchiveWritingRequester:
         self._num_issue_comments = 0
         self._num_issue_events = 0
         self._num_json_by_type = defaultdict(lambda: 0)
+        self._batch_by_type = defaultdict(list)
 
     def requestJsonAndCheck(self, verb, url, parameters=None, headers=None, input=None):
         log.debug(f'# {verb} {url} {parameters=} {headers=} input={pretty_repr(input, max_string=60, max_width=200)}')
@@ -135,14 +136,12 @@ class MigrationArchiveWritingRequester:
             dump = json.dumps(output, sort_keys=True, indent=4)
             if self._migration_archive and 'type' in output:
                 t = output['type']
-                self._num_json_by_type[t] += 1
                 id = self._num_json_by_type[t]
                 json_file = self._migration_archive / f'{pluralize(t)}_{id:06}.json'
-                with open(json_file, 'w') as f:
-                    f.write("[\n")
-                    f.write(dump)
-                    f.write("]\n")
-                log.debug(f'# Wrote {json_file}')
+
+                self._batch_by_type[t].append(output)
+                if len(self._batch_by_type[t]) == 100:
+                    self.flush_type(t)
             else:
                 print(dump)
 
@@ -174,3 +173,17 @@ class MigrationArchiveWritingRequester:
                                 f.write('\n')
 
         return responseHeaders, output
+
+    def flush_type(self, t):
+        id = self._num_json_by_type[t]
+        json_file = self._migration_archive / f'{pluralize(t)}_{id:06}.json'
+        dump = json.dumps(self._batch_by_type[t], sort_keys=True, indent=4)
+        with open(json_file, 'w') as f:
+            f.write(dump)
+            log.info(f'# Wrote {json_file}')
+        self._batch_by_type[t] = list()
+        self._num_json_by_type[t] = id + 1
+
+    def flush(self):
+        for t in self._batch_by_type:
+            self.flush_type(t)

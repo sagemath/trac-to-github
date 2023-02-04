@@ -58,7 +58,7 @@ See also: https://trac.sagemath.org/ticket/30363
 
   - [Open an Issue on GitHub](https://docs.github.com/en/issues). Preview of Issues (converted from Trac): https://github.com/sagemath/trac_to_gh/issues
   - **Trac ticket box attributes** are mapped as follows (see https://github.com/sagemath/trac-to-github/issues/8):
-    - **Type** ("defect", "enhancement", "task") are mapped to "Labels" "bug", "enhancement".
+    - **Type** ("defect", "enhancement", "task") are mapped to "Labels" "t: bug", "t: enhancement".
     - **Component** ("basic arithmetic", "linear algebra", "geometry", ...) are mapped to "Labels" 
       with prefix `c: `
     - **Priority** ("trivial"/"minor"/"major"/"critical"/"blocker") are mapped to "Labels" with prefix `p: `
@@ -71,7 +71,7 @@ See also: https://trac.sagemath.org/ticket/30363
     - **Milestone = duplicate/invalid/wontfix** and **Resolution** ("duplicate", "invalid", "wontfix")
       are replaced by
       - [marking as duplicate](https://docs.github.com/en/issues/tracking-your-work-with-issues/marking-issues-or-pull-requests-as-a-duplicate), 
-      - "Labels" "duplicate", "invalid", "wontfix", or
+      - "Labels" "r: duplicate", "r: invalid", "r: wontfix", or
       - closing with a comment; use "Close as not wanted"
     - **Dependencies**: Use the phrase "Depends on ", followed by the Issue or PR reference.
       Repeat this in separate lines if there is more than one dependency.
@@ -123,7 +123,13 @@ See also: https://trac.sagemath.org/ticket/30363
   - **instead of changing the status of the ticket** (i.e. "positive review" or "needs work"), choose the [correct type of your pull request review](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/reviewing-proposed-changes-in-a-pull-request#submitting-your-review) (i.e. "approve" vs "request changes")
   - for trying the branch of a PR locally, **instead of using `git trac checkout TICKETNUMBER` or `git trac try TICKETNUMBER`**, use [`git fetch upstream pull/PULL_REQUEST_ID/head:LOCAL_BRANCH_NAME`](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/checking-out-pull-requests-locally)
     - alternatively, with the [GitHub command-line interface](https://trac.sagemath.org/ticket/34523), use [`gh pr checkout PULL_REQUEST_ID`](https://cli.github.com/manual/gh_pr_checkout)
-    
+
+- For closing issues, **instead of marking it as invalid/duplicate and ready for review**,
+  - if you have the rights to do so, simply [close the issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/closing-an-issue), add a label to specify the reason (e.g. "r: duplicate") and maybe add a short comment explaining why the issue has been closed, if that's not already clear from the discussion; optionally, to change the reason for closing the issue, click the arrow next to "Close issue" and select a reason;
+  - otherwise, add a short comment indicating that you think the issue should be closed and someone else with the necessary rights will take care of this. 
+  
+  > If you think an issue has been prematurely be closed, feel free to reopen it.
+
 - For organizing, **instead of using meta-tickets**:
   - either open an Issue
     - it can include a checklist of things to do which can be checked off as they are dealt with by various PRs.

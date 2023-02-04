@@ -1593,9 +1593,9 @@ def map_tickettype(tickettype):
     if not tickettype:
         return None
     if tickettype == 'defect':
-        return 'bug'
+        return 't: bug'
     if tickettype == 'enhancement':
-        return 'enhancement'
+        return 't: enhancement'
     # if tickettype == 'clarification':
     #     return 'question'
     # if tickettype == 'task':
@@ -1650,7 +1650,7 @@ def map_status(status):
     "Return a pair: (status, label)"
     status = status.lower()
     if status in ['needs_review', 'needs_work', 'needs_info', 'positive_review']:
-        return 'open', status.replace('_', ' ')
+        return 'open', 's: ' + status.replace('_', ' ')
     elif status in ['', 'new', 'assigned', 'analyzed', 'reopened', 'open', 'needs_info_new']:
         return 'open', None
     elif status in ['closed'] :
@@ -1796,7 +1796,9 @@ def gh_create_attachment(dest, issue, filename, src_ticket_id, attachment=None, 
                     pass
                 case mimetype:
                     pass
-            if filename.endswith('.log'):
+            if mimetype == 'text/plain' and not filename.endswith('.txt'):
+                mimetype = 'application/octet-stream'
+            elif filename.endswith('.log'):
                 # Python thinks it's text/plain.
                 mimetype = 'text/x-log'
             elif filename.endswith('.bz2'):
@@ -1806,9 +1808,9 @@ def gh_create_attachment(dest, issue, filename, src_ticket_id, attachment=None, 
                 mimetype = 'application/gzip'
             logging.info(f'Attachment {filename=} {mimetype=}')
             # supported types from bbs-exporter-1.5.5/lib/bbs_exporter/attachment_exporter/content_type.rb:
-            if mimetype in []: # ['image/gif', 'image/jpeg', 'image/png']:
-                # attachment URLs are rewritten to "/storage/user" paths, links broken.
-                # so we just do everything via repository_file, not attachement
+            if mimetype in ['image/gif', 'image/jpeg', 'image/png']:
+                # on GHE attachment URLs are rewritten to "/storage/user" paths, links broken.
+                # so we just did everything via repository_file, not attachment
                 dirname = 'attachments'
                 create = issue.create_attachment
             else:
@@ -1919,11 +1921,11 @@ def gh_comment_issue(dest, issue, comment, src_ticket_id, comment_id=None, minim
 priority_labels = set(map_priority(priority)
                       for priority in ['trivial', 'minor', 'major', 'critical', 'blocker'])
 def normalize_labels(dest, labels):
-    if 'invalid' in labels:
-        if any(x in labels for x in ['duplicate', 'invalid', 'wontfix', 'worksforme']):
+    if 'r: invalid' in labels:
+        if any(x in labels for x in ['r: duplicate', 'r: invalid', 'r: wontfix', 'r: worksforme']):
             # Remove in favor of the more specific label.
-            labels.remove('invalid')
-    if any(x in labels for x in ['duplicate', 'invalid', 'wontfix', 'worksforme']):
+            labels.remove('r: invalid')
+    if any(x in labels for x in ['r: duplicate', 'r: invalid', 'r: wontfix', 'r: worksforme']):
         labels = sorted(set(labels).difference(priority_labels))
     return labels
 
@@ -2854,6 +2856,7 @@ if __name__ == "__main__":
             convert_wiki(source, dest)
     finally:
         if must_convert_issues and not github:
+            dest._requester.flush()
             # Patch in labels
             dest._requester.requestJsonAndCheck(
                 "PATCH",
