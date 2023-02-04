@@ -1782,6 +1782,35 @@ def gh_attachment_url(src_ticket_id, filename):
     a, local_filename, note = gh_create_attachment(dest, None, filename, src_ticket_id, None)
     return a.url
 
+mime_type_allowed_extensions = {
+    "application/pdf": [".pdf"],
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": [".pptx"],
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+    "application/vnd.oasis.opendocument.text": [".odt", ".fodt"],
+    "application/vnd.oasis.opendocument.spreadsheet": [".ods", ".fods"],
+    "application/vnd.oasis.opendocument.presentation": [".odp", ".fodp"],
+    "application/vnd.oasis.opendocument.graphics": [".odg", ".fodg"],
+    "application/vnd.oasis.opendocument.formula": [".odf"],
+    "application/vnd.ms-excel": [".csv", ".xls"],
+    "application/zip": [".zip"],
+    "application/x-zip-compressed": [".zip"],
+    "application/gzip": [".gz", ".tgz"],
+    "application/x-gzip": [".gz", ".tgz"],
+    "text/plain": [".csv", ".txt", ".patch"],
+    "text/x-log": [".log"],
+    "text/csv": [".csv"],
+    "text/comma-separated-values": [".csv"],
+    "application/csv": [".csv"],
+    "application/excel": [".csv"],
+    "application/vnd.msexcel": [".csv"],
+    "text/markdown": [".md"],
+    # as attachments
+    'image/gif': [".gif"],
+    'image/jpeg': [".jpeg", ".jpg"],
+    'image/png': [".png"],
+    }
+
 def gh_create_attachment(dest, issue, filename, src_ticket_id, attachment=None, comment=None):
     note = None
     if attachment_export:
@@ -1796,17 +1825,20 @@ def gh_create_attachment(dest, issue, filename, src_ticket_id, attachment=None, 
                     pass
                 case mimetype:
                     pass
-            if mimetype == 'text/plain' and not filename.endswith('.txt'):
-                mimetype = 'application/octet-stream'
-            elif filename.endswith('.log'):
+
+            if filename.endswith('.log'):
                 # Python thinks it's text/plain.
                 mimetype = 'text/x-log'
-            elif filename.endswith('.bz2'):
-                mimetype = "application/octet-stream"
             elif filename.endswith('.gz'):
                 # Python thinks that .tar.gz is application/x-tar
                 mimetype = 'application/gzip'
+
             logging.info(f'Attachment {filename=} {mimetype=}')
+
+            allowed_extensions = mime_type_allowed_extensions.get(mimetype, [])
+            if not any(filename.endswith(ext) for ext in allowed_extensions):
+                mimetype = "application/octet-stream"  # which is not an allowed mime type, so will be gzipped.
+
             # supported types from bbs-exporter-1.5.5/lib/bbs_exporter/attachment_exporter/content_type.rb:
             if mimetype in ['image/gif', 'image/jpeg', 'image/png']:
                 # on GHE attachment URLs are rewritten to "/storage/user" paths, links broken.
@@ -1816,8 +1848,8 @@ def gh_create_attachment(dest, issue, filename, src_ticket_id, attachment=None, 
                     create = issue.create_attachment
             else:
                 # Cannot make it an "attachment"(?)
-                if mimetype not in ['text/plain', 'text/x-log', 'application/gzip', 'application/zip',
-                                    'image/gif', 'image/jpeg', 'image/png']:
+                if mimetype not in ['text/plain', 'text/x-log', 'application/gzip', 'application/zip']:
+                    # Here we are stricter than what mime_type_allowed_extensions allows.
                     # Replace by a gzipped file
                     if attachment:
                         attachment['attachment'] = gzip.compress(attachment['attachment'])
