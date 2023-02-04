@@ -28,15 +28,6 @@
     "default_branch": "develop",
     "webhooks": [
       {
-        "payload_url": "http://trac.sagemath.org:12000",
-        "content_type": "json",
-        "event_types": [
-          "*"
-        ],
-        "enable_ssl_verification": true,
-        "active": true
-      },
-      {
         "payload_url": "https://zenodo.org/api/hooks/receivers/github/events/?access_token=AMAwn07RJWHlZ05lyxWKNZlYg0kQqSwkzezMDDqkk7yos7b8rcbdmYAwO6Qz",
         "content_type": "json",
         "event_types": [
