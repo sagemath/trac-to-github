@@ -1811,8 +1811,9 @@ def gh_create_attachment(dest, issue, filename, src_ticket_id, attachment=None, 
             if mimetype in ['image/gif', 'image/jpeg', 'image/png']:
                 # on GHE attachment URLs are rewritten to "/storage/user" paths, links broken.
                 # so we just did everything via repository_file, not attachment
-                dirname = 'attachments'
-                create = issue.create_attachment
+                dirname = 'files'
+                if issue:
+                    create = issue.create_attachment
             else:
                 # Cannot make it an "attachment"(?)
                 if mimetype not in ['text/plain', 'text/x-log', 'application/gzip', 'application/zip',
