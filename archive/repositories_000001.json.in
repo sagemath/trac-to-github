@@ -132,7 +132,7 @@
       "git_lfs_in_archives": false
     },
     "actions_general_settings": {
-      "actions_disabled": false,
+      "actions_disabled": true,
       "allows_all_actions": true,
       "allows_local_actions_only": false,
       "allows_github_owned_actions": false,
