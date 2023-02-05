@@ -2889,7 +2889,6 @@ if __name__ == "__main__":
             convert_wiki(source, dest)
     finally:
         if must_convert_issues and not github:
-            dest._requester.flush()
             # Patch in labels
             dest._requester.requestJsonAndCheck(
                 "PATCH",
@@ -2903,6 +2902,7 @@ if __name__ == "__main__":
                          }
                         for label in gh_labels.values()]}
             )
+            dest._requester.flush()
             with open("minimized_issue_comments.json", "w") as f:
                 json.dump(minimized_issue_comments, f, indent=4)
 
