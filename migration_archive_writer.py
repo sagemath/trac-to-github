@@ -136,7 +136,7 @@ class MigrationArchiveWritingRequester:
             dump = json.dumps(output, sort_keys=True, indent=4)
             if self._migration_archive and 'type' in output:
                 t = output['type']
-                id = self._num_json_by_type[t]
+                id = self._num_json_by_type[t] + 1
                 json_file = self._migration_archive / f'{pluralize(t)}_{id:06}.json'
 
                 self._batch_by_type[t].append(output)
@@ -175,6 +175,7 @@ class MigrationArchiveWritingRequester:
         return responseHeaders, output
 
     def flush_type(self, t):
+        self._num_json_by_type[t] += 1       # Starts at 1
         id = self._num_json_by_type[t]
         json_file = self._migration_archive / f'{pluralize(t)}_{id:06}.json'
         dump = json.dumps(self._batch_by_type[t], sort_keys=True, indent=4)
@@ -182,7 +183,6 @@ class MigrationArchiveWritingRequester:
             f.write(dump)
             log.info(f'# Wrote {json_file}')
         self._batch_by_type[t] = list()
-        self._num_json_by_type[t] = id + 1
 
     def flush(self):
         for t in self._batch_by_type:
